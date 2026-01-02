@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+</head>
+<body>
+{% if is_authenticated %}
+    <p>{{ list_items.0 }}</p>
+    <p>{{ dict_items.first }}</p>
+{% endif %}
+</body>
+</html>
