@@ -1,16 +1,44 @@
-from django.shortcuts import render
+from django.http import HttpResponseRedirect
+from django.shortcuts import render, redirect
+from users.forms import UserLoginForm, UserRegisterForm
+from django.contrib import auth
+from django.urls import reverse
 
 def login(request):
+    if request.method == 'POST':
+        form = UserLoginForm(data= request.POST)
+        if form.is_valid():
+            username = request.POST.get('username')
+            password = request.POST.get('password')
+            user = auth.authenticate(username=username, password=password)
+            if user:
+                auth.login(request, user)
+                return HttpResponseRedirect(reverse('users:profile'))
+    else:
+        form = UserLoginForm()
+
     context = {
         'title': 'Home - Авторизация',
+        'form': form,
     }
     return render(request,'users/login.html', context=context)
 
 def registration(request):
+    if request.method == 'POST':
+        form = UserRegisterForm(data=request.POST)
+        if form.is_valid():
+            form.save()
+            user = form.instance
+            auth.login(request, user)
+            return HttpResponseRedirect(reverse('users:profile'))
+    else:
+        form = UserRegisterForm()
+
     context = {
         'title': 'Home - Регистрация',
+        'form': form,
     }
-    return render(request,'users/registration.html', context=context)
+    return render(request, 'users/registration.html', context)
 
 def profile(request):
     context = {
@@ -19,7 +47,5 @@ def profile(request):
     return render(request,'users/profile.html', context=context)
 
 def logout(request):
-    context = {
-        'title': 'Home - Выйти',
-    }
-    return render(request,'', context=context)
+    auth.logout(request)
+    return redirect(reverse('users:login'))
