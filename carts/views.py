@@ -1,12 +1,27 @@
-from django.http import request
-from django.shortcuts import render
+from django.shortcuts import  redirect
 
-def cart_add(request, product_id):
-    return render(request, 'carts/cart.html' )
+from carts.models import Cart
+from goods.models import Products
 
-def cart_change(request, product_id):
-    return render(request, 'carts/cart.html' )
+def cart_add(request, product_slug):
+    product = Products.objects.get(slug=product_slug)
+    if request.user.is_authenticated:
+        carts = Cart.objects.filter(user=request.user, product=product)
+        if carts.exists():
+            cart = carts.first()
+            if cart:
+                cart.quantity += 1
+                cart.save()
+        else:
+            cart = Cart(user=request.user, product=product, quantity=1)
+            cart.save()
+    return redirect(request.META['HTTP_REFERER'])
 
-def cart_remove(request, product_id):
-    return render(request, 'carts/cart.html' )
+def cart_change(request, product_slug):
+    return redirect(request.META['HTTP_REFERER'])
+
+def cart_remove(request, cart_id):
+    cart = Cart.objects.get(id=cart_id)
+    cart.delete()
+    return redirect(request.META['HTTP_REFERER'])
 
