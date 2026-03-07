@@ -1,10 +1,14 @@
+from django.http import JsonResponse
 from django.shortcuts import  redirect
-
+from django.template.loader import render_to_string
 from carts.models import Cart
 from goods.models import Products
+from carts.utils import get_user_cart
 
-def cart_add(request, product_slug):
-    product = Products.objects.get(slug=product_slug)
+
+def cart_add(request):
+    product_id = request.POST.get('product_id')
+    product = Products.objects.get(id=product_id)
     if request.user.is_authenticated:
         carts = Cart.objects.filter(user=request.user, product=product)
         if carts.exists():
@@ -13,15 +17,60 @@ def cart_add(request, product_slug):
                 cart.quantity += 1
                 cart.save()
         else:
-            cart = Cart(user=request.user, product=product, quantity=1)
-            cart.save()
-    return redirect(request.META['HTTP_REFERER'])
+            Cart.objects.create(user=request.user, product=product, quantity=1)
 
-def cart_change(request, product_slug):
-    return redirect(request.META['HTTP_REFERER'])
+    user_carts = get_user_cart(request)
+    cart_items_html = render_to_string(
+            'carts/includes/included_cart.html', {'carts': user_carts}, request=request)
+    response_data = {
+            "message": "Товар добавлен в корзину",
+            "cart_items_html": cart_items_html,
+        }
 
-def cart_remove(request, cart_id):
+    return JsonResponse(response_data)
+
+def cart_change(request):
+    cart_id = request.POST.get('cart_id')
+    quantity = request.POST.get('quantity')
+
+    cart_item = Cart.objects.get(id=cart_id)
+    cart_item.quantity = quantity
+    cart_item.save()
+    updated_quantity = cart_item.quantity
+
+
+    user_cart = get_user_cart(request)
+    cart_items_html = render_to_string(
+        "carts/includes/included_cart.html",
+        {"carts": user_cart},
+        request=request
+    )
+
+    response_data = {
+        "message": "Количество изменено",
+        "cart_items_html": cart_items_html,
+        "quantity": updated_quantity,
+    }
+
+    return JsonResponse(response_data)
+
+
+def cart_remove(request):
+    cart_id = request.POST.get('cart_id')
     cart = Cart.objects.get(id=cart_id)
+    quantity = cart.quantity
     cart.delete()
-    return redirect(request.META['HTTP_REFERER'])
+
+    user_carts = get_user_cart(request)
+    cart_items_html = render_to_string(
+        'carts/includes/included_cart.html', {'carts': user_carts}, request=request)
+    response_data = {
+        "message": "Товар удалён",
+        "cart_items_html": cart_items_html,
+        "quantity_deleted": quantity,
+    }
+
+    return JsonResponse(response_data)
+
+
 
