@@ -1,7 +1,10 @@
 from django.contrib.auth.decorators import login_required
+from django.db.models import Prefetch
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
 from pyexpat.errors import messages
+
+from orders.models import Order, OrderItem
 from users.forms import UserLoginForm, UserRegisterForm, UserProfileForm
 from django.contrib import auth, messages
 from django.urls import reverse
@@ -63,7 +66,21 @@ def profile(request):
     else:
         form = UserProfileForm(instance=request.user)
 
-    context = {'form': form}
+    orders = (
+        Order.objects.filter(user=request.user)
+            .prefetch_related(
+                Prefetch(
+                    'orderitem_set',
+                    queryset=OrderItem.objects.select_related('product'),
+                )
+        )
+        .order_by('-id')
+    )
+
+    context = {
+        'form': form,
+        'orders': orders
+    }
     return render(request, 'users/profile.html', context)
 
 def users_cart(request):
